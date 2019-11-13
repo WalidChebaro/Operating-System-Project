@@ -3,8 +3,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/wait.h>
+
 #define SIZE_OF_COMMAND_LINE 100
 #define NUMBER_OF_COMMAND_LINE 1024
+
+char command[NUMBER_OF_COMMAND_LINE][SIZE_OF_COMMAND_LINE];
+
 /* Selected Commands of the Shell */
 void cmd_exit();
 void cmd_help();
@@ -14,19 +18,9 @@ void cmd_ls();
 void cmd_mkdir();
 void cmd_create_file();
 void cmd_delete_file();
-char command[NUMBER_OF_COMMAND_LINE][SIZE_OF_COMMAND_LINE];
-
-void cmd_test()
-{
-    int i;
-    for (i = 0; i < NUMBER_OF_COMMAND_LINE; i++)
-    {
-        printf("%s\n", command[i]);
-    }
-}
 
 char helper_cmd_table[8][20] = {
-    "?",
+    "help",
     "exit",
     "pwd",
     "cd",
@@ -88,9 +82,12 @@ void cmd_create_file()
 void cmd_delete_file()
 {
 }
+
+// Divides the line from the command array into token and assignes the corresponding cmd.
 void command_definer(int i)
 {
     char *token = strtok(command[i + 1], " ");
+
     if (strcmp(token, helper_cmd_table[0]) == 0)
     {
         cmd_help();
@@ -98,31 +95,26 @@ void command_definer(int i)
 
     if (strcmp(token, helper_cmd_table[1]) == 0)
     {
-
         cmd_exit();
     }
 
     if (strcmp(token, helper_cmd_table[2]) == 0)
     {
-
         cmd_pwd();
     }
 
     if (strcmp(token, helper_cmd_table[3]) == 0)
     {
-
         cmd_cd();
     }
 
     if (strcmp(token, helper_cmd_table[4]) == 0)
     {
-
         cmd_ls();
     }
 
     if (strcmp(token, helper_cmd_table[5]) == 0)
     {
-
         cmd_mkdir();
     }
 
@@ -138,6 +130,11 @@ void command_definer(int i)
         cmd_delete_file();
     }
 }
+// Scans the line from the user and fills the command array with the line.
+void line_reader(int i){
+    scanf("%s", &command[i][SIZE_OF_COMMAND_LINE]);
+}
+
 void main_loop()
 {
     char cmd;
@@ -145,10 +142,8 @@ void main_loop()
 
     for (i = 0; i < NUMBER_OF_COMMAND_LINE; i++)
     {
-
         printf("%d: ", i);
-        scanf("%s", &command[i][SIZE_OF_COMMAND_LINE]);
-
+        line_reader(i);
         command_definer(i);
     }
 }
