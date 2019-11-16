@@ -41,26 +41,13 @@ cmd_doc cmd_table[] =
      {"create_file", "create_file - create a new file"},
      {"delete_file", "delete_file - delete the current file"}};
 
-void cmd_help(int i)
+void cmd_help()
 {
-    pid_t pid = fork();
-    if (pid == 0)
-    {
-        int i;
-        for (i = 0; i < 9; i++)
-        {
-            printf("%s\n", cmd_table[i].desc);
-        }
-        if (pid > 0)
-        {
-            wait(NULL);
-            command_definer(i);
-        }
 
-        if (pid < 0)
-        {
-            perror("ERROR");
-        }
+    int i;
+    for (i = 0; i < 9; i++)
+    {
+        printf("%s\n", cmd_table[i].desc);
     }
 }
 
@@ -69,50 +56,18 @@ void cmd_exit()
     exit(0);
 }
 
-void cmd_pwd(int i)
+void cmd_pwd()
 {
-    pid_t pid = fork();
-
-    if (pid == 0)
-    {
-        execlp("pwd", "pwd", NULL);
-
-        if (pid > 0)
-        {
-            wait(NULL);
-            command_definer(i);
-        }
-
-        if (pid < 0)
-        {
-            perror("ERROR");
-        }
-    }
+    execlp("pwd", "pwd", NULL);
 }
 
 void cmd_cd()
 {
 }
 
-void cmd_ls(int i)
+void cmd_ls()
 {
-    pid_t pid = fork();
-
-    if (pid == 0)
-    {
-        execlp("ls", "ls", "-l", NULL);
-        if (pid > 0)
-        {
-            wait(NULL);
-            command_definer(i);
-        }
-
-        if (pid < 0)
-        {
-            perror("ERROR");
-        }
-    }
-
+    execlp("ls", "ls", "-l", NULL);
 }
 
 void cmd_mkdir()
@@ -138,7 +93,20 @@ void command_definer(int i)
 
     if (strcmp(token, cmd_table[0].cmd) == 0)
     {
-        cmd_help(i);
+        pid_t pid = fork();
+        if (pid == 0)
+        {
+            cmd_help();
+        }
+        if (pid > 0)
+        {
+            wait(NULL);
+        }
+
+        if (pid < 0)
+        {
+            perror("ERROR");
+        }
     }
 
     if (strcmp(token, cmd_table[1].cmd) == 0)
@@ -148,7 +116,20 @@ void command_definer(int i)
 
     if (strcmp(token, cmd_table[2].cmd) == 0)
     {
-        cmd_pwd(i);
+        pid_t pid = fork();
+        if (pid == 0)
+        {
+            cmd_pwd();
+        }
+        if (pid > 0)
+        {
+            wait(NULL);
+        }
+
+        if (pid < 0)
+        {
+            perror("ERROR");
+        }
     }
 
     if (strcmp(token, cmd_table[3].cmd) == 0)
@@ -158,7 +139,20 @@ void command_definer(int i)
 
     if (strcmp(token, cmd_table[4].cmd) == 0)
     {
-        cmd_ls(i);
+        pid_t pid = fork();
+        if (pid == 0)
+        {
+            cmd_ls();
+        }
+        if (pid > 0)
+        {
+            wait(NULL);
+        }
+
+        if (pid < 0)
+        {
+            perror("ERROR");
+        }
     }
 
     if (strcmp(token, cmd_table[5].cmd) == 0)
