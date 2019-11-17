@@ -89,7 +89,7 @@ void cmd_delete_file()
 // Divides the line from the command array into token and assignes the corresponding cmd.
 void command_definer(int i)
 {
-    char *token = strtok(cmd[i + 1].cmd_line_content, " ");
+    char *token = strtok(cmd[i].cmd_line_content, " ");
 
     if (strcmp(token, cmd_table[0].cmd) == 0)
     {
@@ -109,12 +109,12 @@ void command_definer(int i)
         }
     }
 
-    if (strcmp(token, cmd_table[1].cmd) == 0)
+    else if (strcmp(token, cmd_table[1].cmd) == 0)
     {
         cmd_exit();
     }
 
-    if (strcmp(token, cmd_table[2].cmd) == 0)
+    else if (strcmp(token, cmd_table[2].cmd) == 0)
     {
         pid_t pid = fork();
         if (pid == 0)
@@ -132,12 +132,12 @@ void command_definer(int i)
         }
     }
 
-    if (strcmp(token, cmd_table[3].cmd) == 0)
+    else if (strcmp(token, cmd_table[3].cmd) == 0)
     {
         cmd_cd();
     }
 
-    if (strcmp(token, cmd_table[4].cmd) == 0)
+    else if (strcmp(token, cmd_table[4].cmd) == 0)
     {
         pid_t pid = fork();
         if (pid == 0)
@@ -155,27 +155,50 @@ void command_definer(int i)
         }
     }
 
-    if (strcmp(token, cmd_table[5].cmd) == 0)
+    else if (strcmp(token, cmd_table[5].cmd) == 0)
     {
         cmd_mkdir();
     }
 
-    if (strcmp(token, cmd_table[6].cmd) == 0)
+    else if (strcmp(token, cmd_table[6].cmd) == 0)
 
     {
         cmd_create_file();
     }
 
-    if (strcmp(token, cmd_table[7].cmd) == 0)
+    else if (strcmp(token, cmd_table[7].cmd) == 0)
     {
         cmd_delete_file();
     }
 }
 
 // Scans the line from the user and fills the command array with the line.
-void line_reader(int i)
+int line_reader(int i)
 {
-    scanf("%s", &cmd[i].cmd_line_content[SIZE_OF_COMMAND_LINE]);
+    char input[SIZE_OF_COMMAND_LINE];
+    int index = 0;
+    int j;
+    while (scanf("%c", &input[index]))
+    {
+        if (input[index] == '\n' )
+        {
+            break;
+        }
+        index++;
+    }
+
+    if (index == 0)
+    {
+        return 1;
+    }
+    else
+    {
+        for (j = 0; j < sizeof(input); j++)
+        {
+            cmd[i].cmd_line_content[j] = input[j];
+        }
+        return 0;
+    }
 }
 
 void main_loop()
@@ -186,8 +209,10 @@ void main_loop()
     for (i = 0; i < NUMBER_OF_COMMAND_LINE; i++)
     {
         printf("%d: ", i);
-        line_reader(i);
-        command_definer(i);
+        if(line_reader(i)==1);
+        else{
+            command_definer(i);
+        }
     }
 }
 
