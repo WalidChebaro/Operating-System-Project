@@ -11,7 +11,7 @@
 void cmd_exit();
 void cmd_help();
 void cmd_pwd();
-void cmd_cd();
+void cmd_cd(char *);
 void cmd_ls();
 void cmd_mkdir();
 void cmd_create_file();
@@ -61,8 +61,9 @@ void cmd_pwd()
     execlp("pwd", "pwd", NULL);
 }
 
-void cmd_cd()
+void cmd_cd(char *token)
 {
+    chdir(token);
 }
 
 void cmd_ls()
@@ -71,10 +72,6 @@ void cmd_ls()
 }
 
 void cmd_mkdir()
-{
-}
-
-void cmd_chdir()
 {
 }
 
@@ -88,87 +85,107 @@ void cmd_delete_file()
 
 // Divides the line from the command array into token and assignes the corresponding cmd.
 void command_definer(int i)
-{
-    char *token = strtok(cmd[i].cmd_line_content, " ");
-
-    if (strcmp(token, cmd_table[0].cmd) == 0)
+{   
+    char *token;
+    char *temp = cmd[i].cmd_line_content;
+    // char *token = strtok(cmd[i].cmd_line_content, " \t\r\n\a");
+    while ((token = strtok_r(temp, " \t\r\n\a", &temp)))
     {
-        pid_t pid = fork();
-        if (pid == 0)
+        if (strcmp(token, cmd_table[0].cmd) == 0)
         {
-            cmd_help();
-        }
-        if (pid > 0)
-        {
-            wait(NULL);
-        }
+            pid_t pid = fork();
+            if (pid == 0)
+            {
+                cmd_help();
+            }
+            if (pid > 0)
+            {
+                wait(NULL);
+            }
 
-        if (pid < 0)
-        {
-            perror("ERROR");
-        }
-    }
-
-    else if (strcmp(token, cmd_table[1].cmd) == 0)
-    {
-        cmd_exit();
-    }
-
-    else if (strcmp(token, cmd_table[2].cmd) == 0)
-    {
-        pid_t pid = fork();
-        if (pid == 0)
-        {
-            cmd_pwd();
-        }
-        if (pid > 0)
-        {
-            wait(NULL);
+            if (pid < 0)
+            {
+                perror("ERROR");
+            }
         }
 
-        if (pid < 0)
+        else if (strcmp(token, cmd_table[1].cmd) == 0)
         {
-            perror("ERROR");
-        }
-    }
-
-    else if (strcmp(token, cmd_table[3].cmd) == 0)
-    {
-        cmd_cd();
-    }
-
-    else if (strcmp(token, cmd_table[4].cmd) == 0)
-    {
-        pid_t pid = fork();
-        if (pid == 0)
-        {
-            cmd_ls();
-        }
-        if (pid > 0)
-        {
-            wait(NULL);
+            cmd_exit();
         }
 
-        if (pid < 0)
+        else if (strcmp(token, cmd_table[2].cmd) == 0)
         {
-            perror("ERROR");
+            pid_t pid = fork();
+            if (pid == 0)
+            {
+                cmd_pwd();
+            }
+            if (pid > 0)
+            {
+                wait(NULL);
+            }
+
+            if (pid < 0)
+            {
+                perror("ERROR");
+            }
         }
-    }
 
-    else if (strcmp(token, cmd_table[5].cmd) == 0)
-    {
-        cmd_mkdir();
-    }
+        else if (strcmp(token, cmd_table[3].cmd) == 0)
+        {
+            while ((token = strtok_r(temp, " \t\r\n\a", &temp)))
+            {
+                pid_t pid = fork();
+                if (pid == 0)
+                {
+                    cmd_cd(token);
+                }
+                if (pid > 0)
+                {
+                    wait(NULL);
+                }
 
-    else if (strcmp(token, cmd_table[6].cmd) == 0)
+                if (pid < 0)
+                {
+                    perror("ERROR");
+                }
+            }
+        }
 
-    {
-        cmd_create_file();
-    }
+        else if (strcmp(token, cmd_table[4].cmd) == 0)
+        {
+            pid_t pid = fork();
+            if (pid == 0)
+            {
+                cmd_ls();
+            }
+            if (pid > 0)
+            {
+                wait(NULL);
+            }
 
-    else if (strcmp(token, cmd_table[7].cmd) == 0)
-    {
-        cmd_delete_file();
+            if (pid < 0)
+            {
+                perror("ERROR");
+            }
+        }
+
+        else if (strcmp(token, cmd_table[5].cmd) == 0)
+        {
+            cmd_mkdir();
+        }
+
+        else if (strcmp(token, cmd_table[6].cmd) == 0)
+
+        {
+            cmd_create_file();
+        }
+
+        else if (strcmp(token, cmd_table[7].cmd) == 0)
+        {
+            cmd_delete_file();
+        }
     }
 }
 
@@ -180,7 +197,7 @@ int line_reader(int i)
     int j;
     while (scanf("%c", &input[index]))
     {
-        if (input[index] == '\n' )
+        if (input[index] == '\n')
         {
             break;
         }
@@ -193,13 +210,15 @@ int line_reader(int i)
     }
     else
     {
-        for (j = 0; j < sizeof(input); j++)
+        for (j = 0; j <= sizeof(input); j++)
         {
             cmd[i].cmd_line_content[j] = input[j];
         }
         return 0;
     }
 }
+
+
 
 void main_loop()
 {
@@ -208,9 +227,12 @@ void main_loop()
 
     for (i = 0; i < NUMBER_OF_COMMAND_LINE; i++)
     {
+        
         printf("%d: ", i);
-        if(line_reader(i)==1);
-        else{
+        if (line_reader(i) == 1)
+            ;
+        else
+        {
             command_definer(i);
         }
     }
@@ -221,20 +243,5 @@ int main(int argc, char *argv[])
     /* start a program over the one running at all time, the kernel.
     But it is a copy of the kernel, that's why we use exec to run a 
     different program*/
-    pid_t pid = fork();
-
-    if (pid < 0)
-    {
-        perror("ERROR");
-    }
-
-    if (pid == 0)
-    {
-        main_loop();
-    }
-
-    if (pid > 0)
-    {
-        wait(NULL);
-    }
+        main_loop();  
 }
