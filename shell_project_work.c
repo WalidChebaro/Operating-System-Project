@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
 
 #define SIZE_OF_COMMAND_LINE 100
 #define NUMBER_OF_COMMAND_LINE 1024
@@ -13,9 +14,11 @@ void cmd_help();
 void cmd_pwd();
 void cmd_cd(char *);
 void cmd_ls();
-void cmd_mkdir();
-void cmd_create_file();
-void cmd_delete_file();
+void cmd_mkdir(char *);
+void cmd_rmdir(char *);
+void cmd_create_file(char *);
+void cmd_read_file(char *);
+void cmd_delete_file(char *);
 void command_definer(int);
 
 typedef struct cmd_line
@@ -38,14 +41,16 @@ cmd_doc cmd_table[] =
      {"cd", "cd - change the directory"},
      {"ls", "ls - list the current directory"},
      {"mkdir", "mkdir - create a directory"},
+     {"rmdir", "rmdir - remove a directory"},
      {"create_file", "create_file - create a new file"},
+     {"read_file", "read_file - opens a created file"},
      {"delete_file", "delete_file - delete the current file"}};
 
 void cmd_help()
 {
 
     int i;
-    for (i = 0; i < 9; i++)
+    for (i = 0; i < 10; i++)
     {
         printf("%s\n", cmd_table[i].desc);
     }
@@ -71,42 +76,66 @@ void cmd_ls()
     execlp("ls", "ls", "-l", NULL);
 }
 
-void cmd_mkdir()
+void cmd_mkdir(char *token)
 {
+    if (mkdir(token, S_IRWXU | S_IRWXG | S_IRWXO) == 0)
+    {
+        printf("%s directory created.\n", token);
+    }
+    else
+    {
+        printf("Unable to create directory, %s directory is already created.\n", token);
+    }
 }
 
-void cmd_create_file()
+void cmd_rmdir(char *token)
 {
+    if (rmdir(token) == 0)
+    {
+        printf("%s directory removed.\n", token);
+    }
+    else
+    {
+        printf("Unable to remove %s directory.\n", token);
+    }
 }
 
-void cmd_delete_file()
+void cmd_create_file(char *token)
 {
+    FILE *fl;
+    fl = fopen(token, "w");
+    fclose(fl);
+}
+
+void cmd_read_file(char *token)
+{
+    FILE *fl;
+    fl = fopen(token, "r");
+    char c;
+    while ((c = getc(fl)) != EOF)
+    {
+        printf("%c", c);
+    }
+    fclose(fl);
+    printf("\nEnd of File\n");
+}
+
+void cmd_delete_file(char *token)
+{
+    remove(token);
 }
 
 // Divides the line from the command array into token and assignes the corresponding cmd.
 void command_definer(int i)
-{   
+{
     char *token;
     char *temp = cmd[i].cmd_line_content;
-    // char *token = strtok(cmd[i].cmd_line_content, " \t\r\n\a");
+
     while ((token = strtok_r(temp, " \t\r\n\a", &temp)))
     {
         if (strcmp(token, cmd_table[0].cmd) == 0)
         {
-            pid_t pid = fork();
-            if (pid == 0)
-            {
-                cmd_help();
-            }
-            if (pid > 0)
-            {
-                wait(NULL);
-            }
-
-            if (pid < 0)
-            {
-                perror("ERROR");
-            }
+            cmd_help();
         }
 
         else if (strcmp(token, cmd_table[1].cmd) == 0)
@@ -136,20 +165,7 @@ void command_definer(int i)
         {
             while ((token = strtok_r(temp, " \t\r\n\a", &temp)))
             {
-                pid_t pid = fork();
-                if (pid == 0)
-                {
-                    cmd_cd(token);
-                }
-                if (pid > 0)
-                {
-                    wait(NULL);
-                }
-
-                if (pid < 0)
-                {
-                    perror("ERROR");
-                }
+                cmd_cd(token);
             }
         }
 
@@ -173,18 +189,44 @@ void command_definer(int i)
 
         else if (strcmp(token, cmd_table[5].cmd) == 0)
         {
-            cmd_mkdir();
+            while ((token = strtok_r(temp, " \t\r\n\a", &temp)))
+            {
+                cmd_mkdir(token);
+            }
         }
 
         else if (strcmp(token, cmd_table[6].cmd) == 0)
-
         {
-            cmd_create_file();
+            while ((token = strtok_r(temp, " \t\r\n\a", &temp)))
+            {
+                cmd_rmdir(token);
+            }
         }
 
         else if (strcmp(token, cmd_table[7].cmd) == 0)
+
         {
-            cmd_delete_file();
+            while ((token = strtok_r(temp, " \t\r\n\a", &temp)))
+            {
+                cmd_create_file(token);
+            }
+        }
+
+        else if (strcmp(token, cmd_table[8].cmd) == 0)
+
+        {
+            while ((token = strtok_r(temp, " \t\r\n\a", &temp)))
+            {
+                cmd_read_file(token);
+            }
+        }
+
+        else if (strcmp(token, cmd_table[9].cmd) == 0)
+        {
+            while ((token = strtok_r(temp, " \t\r\n\a", &temp)))
+            {
+                cmd_delete_file(token);
+            }
         }
     }
 }
@@ -218,8 +260,6 @@ int line_reader(int i)
     }
 }
 
-
-
 void main_loop()
 {
     char cmd;
@@ -227,7 +267,6 @@ void main_loop()
 
     for (i = 0; i < NUMBER_OF_COMMAND_LINE; i++)
     {
-        
         printf("%d: ", i);
         if (line_reader(i) == 1)
             ;
@@ -240,8 +279,5 @@ void main_loop()
 
 int main(int argc, char *argv[])
 {
-    /* start a program over the one running at all time, the kernel.
-    But it is a copy of the kernel, that's why we use exec to run a 
-    different program*/
-        main_loop();  
+    main_loop();
 }
