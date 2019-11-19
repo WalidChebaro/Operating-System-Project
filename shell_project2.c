@@ -89,48 +89,51 @@ int line_reader()
 
 void executes()
 {
-    int i;
     char *token[10];
-    token[0] = strtok(cmd, " \n");
-    while (token[i] != NULL)
+    char *tok;
+    int i = 0;
+
+    tok = strtok(cmd, " \n");
+    while (tok != NULL)
     {
+        token[i] = tok;
         i++;
-        token[i] = strtok(NULL, " \n");
+        tok = strtok(NULL, " \n");
     }
+    token[i] = NULL;
 
-    if (strcmp(token[0], cmd_table[0].cmd) == 0 || strcmp(token[0], cmd_table[1].cmd) == 0 || strcmp(token[0], cmd_table[2].cmd) == 0)
+    if (strcmp(token[0], cmd_table[2].cmd) == 0)
     {
-        if (strcmp(token[0], cmd_table[0].cmd) == 0)
-        {
-            chdir(token[1]);
-        }
-
-        else if (strcmp(token[0], cmd_table[1].cmd) == 0)
-        {
-            cmd_help();
-        }
-
-        else if (strcmp(token[0], cmd_table[2].cmd) == 0)
-        {
-            cmd_exit();
-        }
+        cmd_exit();
+    }
+    else if (strcmp(token[0], cmd_table[0].cmd) == 0)
+    {
+        chdir(token[1]);
     }
     else
     {
         pid_t pid = fork();
-
         if (pid == 0)
         {
-            execvp(token[0], token);
+            if (strcmp(token[0], cmd_table[1].cmd) == 0)
+            {
+                cmd_help();
+            }
+
+            else
+            {
+                execvp(token[0], token);
+            }
         }
 
-        if (pid > 0)
+        else if (pid > 0)
         {
             wait(NULL);
         }
         else
         {
-            perror("Error forking child.");
+            perror("fork failed");
+            _exit(1);
         }
     }
 }
