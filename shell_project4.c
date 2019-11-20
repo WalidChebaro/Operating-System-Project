@@ -25,6 +25,7 @@ char *token[10];
 char *token_p[10];
 char cmd[SIZE_OF_COMMAND_LINE];
 
+
 /* Implementing the help function using a struct cmd_doc of command 
 and their description, inserting them in an array cmd_table[],
 and printing them using the method cmd_help() */
@@ -88,6 +89,8 @@ void main_loop()
             {
                 exec_pipes(); // Execution using pipes
             }
+            memset(token, 0, sizeof(token));
+            memset(cmd, 0, sizeof(cmd));
         }
         //  i++; // Increment line number
     }
@@ -110,7 +113,6 @@ int line_reader()
         }
         index++;
     }
-    memset(cmd,0,sizeof(cmd));
     // If empty, return 1, used in main_loop to do nothing until user inputs a command.
     if (index == 0)
     {
@@ -133,12 +135,12 @@ void token_space(char line[])
     char *tok;
     int i = 0;
 
-    tok = strtok(line, " \n");
+    tok = strtok(line, " \t\r\n\a");
     while (tok != NULL)
     {
         token[i] = tok;
         i++;
-        tok = strtok(NULL, " \n");
+        tok = strtok(NULL, " \t\r\n\a");
     }
     token[i] = NULL;
 }
@@ -168,7 +170,10 @@ shell commands. If we don't create a child process to run a new program (execvp)
 the function will execute then the shell will terminate automatically */
 void exec()
 {
+    printf("%s\n", cmd);
     token_space(cmd);
+    
+    //printf("%s\n", token[2]);
     // Comparing user input (command) to our custom table of commands
     if (strcmp(token[0], cmd_table[2].cmd) == 0)
     {
@@ -179,8 +184,6 @@ void exec()
     {
         // Change directory
         chdir(token[1]);
-        memset(token, 0, sizeof(token));
-        memset(cmd,0,sizeof(cmd));
     }
     else
     {
@@ -192,20 +195,17 @@ void exec()
             {
                 // HELP, Provides info to the user
                 cmd_help();
-                memset(token, 0, sizeof(token));
-                memset(cmd,0,sizeof(cmd));
             }
 
             else
             {
+printf("%s\n", token[0]);
                 // Run any other (usual) shell command
-                if (execvp(token[0], token )< 0)
+                if (execvp(token[0], token) < 0)
                 {
                     printf("Could not execute command.");
                     exit(0);
                 }
-                memset(token, 0, sizeof(token));
-                memset(cmd,0,sizeof(cmd));
             }
         }
 
@@ -221,7 +221,6 @@ void exec()
             exit(1);
         }
     }
-
 }
 
 /* In pipe mode, first we start by tokenizing the user input, */
@@ -287,8 +286,7 @@ void exec_pipes()
     else
     {
         printf("\nCould not fork");
-    }
-    memset(token_p, 0, sizeof(token_p));
+    } memset(token_p, 0, sizeof(token_p));
 }
 
 int main(int argc, char *argv[])
