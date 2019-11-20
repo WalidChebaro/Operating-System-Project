@@ -214,49 +214,44 @@ void exec()
     }
 }
 
-/* In pipe mode, first we start by tokenizing the user input, then we fork a first child process.
-In it, we initialize a pipe used for interprocess communication and we fork a second child in the first one,
-where we're going to execute the first command of the line, and send the result to the other process using the pipe. */
-
 void exec_pipes()
 {
-
+    // Tokenizing on pipes and ditermening the number of pipes
     int pipe_number = token_pipe(cmd);
-    int pid[pipe_number + 1];
-
+    int command_number = pipe_number + 1;
+    // The number of processes are equal to the number of commands
+    int pid[command_number];
+    // The total number of pipes to be made is twice the number of pipes that the user inserted
+    // in order to write and read.
     int totalPipes = (pipe_number)*2;
     int pipes[totalPipes];
 
     // Initializing pipes
-    for (int x = 0; x < totalPipes; x += 2)
-        pipe(pipes + x);
+    int j;
+    for (j = 0; j < totalPipes; j += 2)
+        pipe(pipes + j);
 
-    // Lets create as many processes as there are commands;
-    // Each command executes in its own process
-    for (int i = 0; i < pipe_number + 1; i++)
+    // We create processes depending on the number of commands
+    // Each process executes a command
+    int i;
+    for (i = 0; i < command_number; i++)
     {
-        // For each command lets create a new process
-        if ((pid[i] = fork()) < 0)
-        {
-            // If failed to created new process inform user and quit
-            printf("*** ERROR: forking child process failed\n");
-            exit(-1);
-        }
-        else if (pid[i] == 0)
-        {
-            // If its child process
+        // For each command we create a new process
+        pid[i] = fork();
 
-            // First process only produces result to pip write end,
-            // as input it gets from stdin - console
+        if (pid[i] == 0)
+        {
+
             if (i == 0)
             {
-                // setting (duplicating) process stdout to send output
-                // to pipe write end (1)
-                dup2(pipes[1], 1);
 
-                // Closing all the other pipes ends, we don't need them
-                for (int x = 0; x < totalPipes; x++)
-                    close(pipes[x]);
+                // Dup is used to send the output to the pipe write end (1)
+                close(1);
+                dup(pipes[1]);
+
+                // Closing all the other pipes ends as they are not needed
+                for (int j = 0; j < totalPipes; j++)
+                    close(pipes[j]);
 
                 token_space(token_p[i]);
 
@@ -267,19 +262,39 @@ void exec_pipes()
                 }
 
                 memset(token, 0, sizeof(token)); // Resetting the array of tokens
-
-                // Last process only gets input from read pipe end end prints
-                // to stdout - console
             }
-            else if (i == pipe_number)
+            else if (i == command_number - 1)
             {
-                // setting (duplicating) process stdin to receive input
-                // from pipes read end
-                dup2(pipes[totalPipes - 2], 0);
+                // Dup is used to receive input from the pipe read end (0)
+                close(0);
+                dup(pipes[totalPipes - 2]);
 
-                // Closing unsed pipe ends
-                for (int x = 0; x < totalPipes; x++)
-                    close(pipes[x]);
+                // Closing the unused pipe ends
+                for (int j = 0; j < totalPipes; j++)
+                    close(pipes[j]);
+
+                token_space(token_p[i]);
+
+                if (execvp(token[0], token) < 0)
+                {
+                    printf("Could not execute command at pipe %d\n", i + 2);
+                    exit(0);
+                }
+
+                memset(token, 0, sizeof(token)); // Resetting the array of tokens
+            }
+            else
+            {
+                // Pipe read end will go to the stdin process
+                close(0);
+                dup(pipes[i + (i - 2)]);
+                // Process stdout will go to the pipe write end
+                close(1);
+                dup(pipes[i + i + 1]);
+
+                // Closing the unused pipe ends
+                for (int j = 0; j < totalPipes; j++)
+                    close(pipes[j]);
 
                 token_space(token_p[i]);
 
@@ -291,112 +306,22 @@ void exec_pipes()
 
                 memset(token, 0, sizeof(token)); // Resetting the array of tokens
             }
-            // Middle process, receives input from pipe read end passes
-            // to another process to write end of pipe
-            else
-            {
-                // Let pipe "read end" go to process stdin
-                dup2(pipes[i + (i - 2)], 0);
-                // Let process stdout pass to pipe "write end"
-                dup2(pipes[i + i + 1], 1);
-
-                // Closing unsed pipe ends
-                for (int x = 0; x < totalPipes; x++)
-                    close(pipes[x]);
-
-                // Execute program
-                token_space(token_p[i]);
-
-                if (execvp(token[0], token) < 0)
-                {
-                    printf("Could not execute command at pipe %d\n", i + 2);
-                    exit(0);
-                }
-
-                memset(token, 0, sizeof(token)); // Resetting the array of tokens
-            }
+        }
+        else if (pid[i] < 0)
+        {
+            printf("failed to fork\n");
+            exit(1);
         }
     }
 
-    // In parent wait untill all process finished
-    // Closing unsed pipe ends
-    for (int x = 0; x < totalPipes; x++)
-        close(pipes[x]);
+    // Closing the unused pipe ends
+    for (int j = 0; j < totalPipes; j++)
+        close(pipes[j]);
 
-    // Lets waite untill all proccesses finshed!
-    for (int i = 0; i < pipe_number + 1; i++)
+    // Wait until all processes are finished
+    for (int i = 0; i < command_number; i++)
         waitpid(pid[i], NULL, 0);
 }
-
-// void exec_pipes()
-// {
-//     int pipe_number = token_pipe(cmd);
-//     int i;
-//     for (i = 0; i < pipe_number; i++)
-//     {
-//         pid_t pid1;
-
-//         pid1 = fork();
-
-//         if (pid1 == 0)
-//         {
-//             int pipefd[2];
-//             pid_t pid2;
-
-//             pipe(pipefd);
-
-//             pid2 = fork();
-
-//             if (pid2 == 0)
-//             {
-//                 close(pipefd[0]); // Closing reading end of the pipe
-//                 close(1);
-//                 dup(pipefd[1]); // Duplicating the writing end of the pipe to send output
-//                 token_space(token_p[0]);
-
-//                 if (execvp(token[0], token) < 0)
-//                 {
-//                     printf("Could not execute command before pipe\n");
-//                     exit(0);
-//                 }
-
-//                 memset(token, 0, sizeof(token)); // Resetting the array of tokens
-//             }
-//             else if (pid2 > 0)
-//             {
-//                 close(pipefd[1]); // Closing the writing end of the pipe
-//                 close(0);
-//                 dup(pipefd[0]); // Duplicating what's read from the pipe (what is sent by the second child)
-//                 wait(NULL);
-//                 token_space(token_p[1]);
-
-//                 if (execvp(token[0], token) < 0) // Executing the second command using the result of the other one
-//                 {
-//                     printf("Could not execute command after pipe\n");
-//                     exit(0);
-//                 }
-
-//                 memset(token, 0, sizeof(token));
-//             }
-
-//             else
-//             {
-//                 printf("failed to fork\n");
-//                 exit(1);
-//             }
-//             memset(token_p, 0, sizeof(token_p));
-//         }
-//         else if (pid1 > 0)
-//         {
-//             wait(NULL);
-//         }
-//         else
-//         {
-//             printf("failed to fork\n");
-//         }
-//         memset(token_p, 0, sizeof(token_p));
-//     }
-// }
 
 int main(int argc, char *argv[])
 {
