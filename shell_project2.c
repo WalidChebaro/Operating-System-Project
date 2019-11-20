@@ -20,7 +20,7 @@ void exec_pipes();
 void main_loop();
 
 void token_space(char[]);
-void token_pipe(char[]);
+int token_pipe(char[]);
 char *token[10];
 char *token_p[10];
 char cmd[SIZE_OF_COMMAND_LINE];
@@ -55,10 +55,13 @@ we're executing the command using pipes, and normally otherwise. */
 void main_loop()
 {
     int i = 0;
+    char cwd[1024];
 
     while (1)
     {
-        printf("%d: ", i);
+        getcwd(cwd, sizeof(cwd));
+        printf("WJC_SHELL/%s: ", cwd);
+        // printf("%d: ", i);
 
         // If empty command line, do nothing
         if (line_reader() == 1)
@@ -86,7 +89,7 @@ void main_loop()
                 exec_pipes(); // Execution using pipes
             }
         }
-        i++; // Increment line number
+        //  i++; // Increment line number
     }
 }
 
@@ -115,7 +118,7 @@ int line_reader()
     }
     else
     {
-        for (i = 0; i <= sizeof(input); i++)
+        for (i = 0; i < sizeof(input); i++)
         {
             cmd[i] = input[i];
         }
@@ -142,7 +145,7 @@ void token_space(char line[])
 
 /* In piping mode, we're delimiting the user input by searching for "|"
 we then tokenize again using " " as delimiter to get each command separately */
-void token_pipe(char line[])
+int token_pipe(char line[])
 {
     char *tok;
     int i = 0;
@@ -155,6 +158,7 @@ void token_pipe(char line[])
         tok = strtok(NULL, "|");
     }
     token_p[i] = NULL;
+    return i - 1;
 }
 
 /* To execute the commands entered by the user, we start by calling token_space()
@@ -204,7 +208,7 @@ void exec()
 
         else
         {
-            perror("fork failed");
+            perror("failed to fork");
             exit(1);
         }
     }
@@ -215,49 +219,65 @@ void exec()
 void exec_pipes()
 {
     token_pipe(cmd);
+    pid_t pid1;
 
-    int pipefd[2];
-    pid_t pid;
+    pid1 = fork();
 
-    pipe(pipefd);
-
-    pid = fork();
-
-    if (pid == 0)
+    if (pid1 == 0)
     {
-        close(pipefd[1]);
-        dup2(pipefd[0], 0);
-        token_space(token_p[1]);
+        int pipefd[2];
+        pid_t pid2;
 
-        if (execvp(token[0], token) < 0)
+        pipe(pipefd);
+
+        pid2 = fork();
+
+        if (pid2 == 0)
         {
-            printf("Could not execute command before pipe.");
-            exit(0);
+            close(pipefd[0]);
+            close(1);
+            dup(pipefd[1]);
+            token_space(token_p[0]);
+
+            if (execvp(token[0], token) < 0)
+            {
+                printf("Could not execute command before pipe.");
+                exit(0);
+            }
+
+            memset(token, 0, sizeof(token));
+        }
+        else if (pid2 > 0)
+        {
+            close(pipefd[1]);
+            close(0);
+            dup(pipefd[0]);
+            wait(NULL);
+            token_space(token_p[1]);
+
+            if (execvp(token[0], token) < 0)
+            {
+                printf("Could not execute command after pipe.");
+                exit(0);
+            }
+
+            memset(token, 0, sizeof(token));
         }
 
-        memset(token, 0, sizeof(token));
-    }
-
-    else if (pid>0)
-    {
-        close(pipefd[0]);
-        dup2(pipefd[1], 1);
-
-        token_space(token_p[0]);
-
-        if (execvp(token[0], token) < 0)
+        else
         {
-            printf("Could not execute command after pipe.");
-            exit(0);
+            printf("failed to fork");
+            exit(1);
         }
-
-        memset(token, 0, sizeof(token));
+        memset(token_p, 0, sizeof(token_p));
     }
-
+    else if (pid1 > 0)
+    {
+        wait(NULL);
+    }
     else
     {
-        printf("failed to fork");
-        return;
+        printf("\nCould not fork");
     }
     memset(token_p, 0, sizeof(token_p));
 }
@@ -279,6 +299,7 @@ int main(int argc, char *argv[])
     else
     {
         printf("failed to fork");
+        exit(1);
     }
 
     return 0;
