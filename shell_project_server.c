@@ -55,6 +55,7 @@ void cmd_help(int client_socket)
     strcat(help, cmd_table[3].desc);
 
     send(client_socket, help, sizeof(help), 0);
+    close(client_socket);
 }
 
 /* In the main loop, we're printing each line number on the shell,
@@ -170,9 +171,7 @@ void exec(int client_socket)
                     printf("Could not execute command\n");
                     exit(0);
                 }
-                //close(client_socket);
-                close(2);
-                close(1);
+                close(client_socket);
             }
         }
 
@@ -252,9 +251,7 @@ void exec_pipes(int client_socket)
                     printf("Could not execute command at pipe %d\n", i+1);
                     exit(0);
                 }
-                // close(client_socket);
-                // close(2);
-                // close(1);
+                close(client_socket);
                 memset(token, 0, sizeof(token)); // Resetting the array of tokens
             }
             else
