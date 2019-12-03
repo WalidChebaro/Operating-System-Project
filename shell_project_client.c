@@ -43,7 +43,6 @@ int main(int argc, char *argv[])
         char line[SIZE_OF_LINE];
         char output[SIZE_OF_LINE];
         char cmd[SIZE_OF_COMMAND_LINE];
-        int index = 0;
         int esc = 0;
         int no_output = 2;
         read(client_socket, line, SIZE_OF_LINE);
@@ -95,6 +94,7 @@ int main(int argc, char *argv[])
             exit(1);
         }
         memset(output, 0, sizeof(output));
+        memset(cmd, 0, sizeof(cmd));
     }
 
     return 0;

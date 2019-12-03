@@ -82,9 +82,7 @@ void main_loop(int client_socket)
         }
         if (p == 0)
         {
-           // dup2(client_socket, 1);
             exec(client_socket); // Normal execution
-          //  close(1);
         }
         else
         {
@@ -164,12 +162,17 @@ void exec(int client_socket)
 
             else
             {
+                dup2(client_socket, 1);
+                dup2(client_socket, 2);
                 // Run any other (usual) shell command
                 if (execvp(token[0], token) < 0)
                 {
                     printf("Could not execute command\n");
                     exit(0);
                 }
+                //close(client_socket);
+                close(2);
+                close(1);
             }
         }
 
@@ -219,60 +222,58 @@ void exec_pipes(int client_socket)
             {
 
                 // Dup is used to send the output to the pipe write end (1)
-                close(1);
-                dup(pipes[1]);
-
+                dup2(pipes[totalPipes - 1], 1);
                 // Closing all the other pipes ends as they are not needed
                 for (int j = 0; j < totalPipes; j++)
                     close(pipes[j]);
-
                 token_space(token_p[i]);
+
                 if (execvp(token[0], token) < 0)
                 {
-                    printf("Could not execute command at pipe %d\n", i - 1);
+                    printf("Could not execute command at pipe 1\n");
                     exit(0);
                 }
+
                 memset(token, 0, sizeof(token)); // Resetting the array of tokens
             }
             else if (i == command_number - 1)
             {
                 // Dup is used to receive input from the pipe read end (0)
-                close(0);
-                dup(pipes[totalPipes - 2]);
-
+                dup2(pipes[totalPipes - 2], 0);
                 // Closing the unused pipe ends
                 for (int j = 0; j < totalPipes; j++)
                     close(pipes[j]);
-
                 token_space(token_p[i]);
-               // dup2(client_socket, 1);
+
+                dup2(client_socket, 1);
+                dup2(client_socket, 2);
                 if (execvp(token[0], token) < 0)
                 {
-                    printf("Could not execute command at pipe %d\n", i + 1);
+                    printf("Could not execute command at pipe %d\n", i+1);
                     exit(0);
                 }
-               // close(1);
+                // close(client_socket);
+                // close(2);
+                // close(1);
                 memset(token, 0, sizeof(token)); // Resetting the array of tokens
             }
             else
             {
                 // Pipe read end will go to the stdin process
-                close(0);
-                dup(pipes[i + (i - 2)]);
+                dup2(pipes[i + (i - 2)], 0);
                 // Process stdout will go to the pipe write end
-                close(1);
-                dup(pipes[i + i + 1]);
-
+                dup2(pipes[i + i + 1], 1);
                 // Closing the unused pipe ends
                 for (int j = 0; j < totalPipes; j++)
                     close(pipes[j]);
-
                 token_space(token_p[i]);
+
                 if (execvp(token[0], token) < 0)
                 {
                     printf("Could not execute command at pipe %d\n", i);
                     exit(0);
                 }
+
                 memset(token, 0, sizeof(token)); // Resetting the array of tokens
             }
         }
@@ -282,7 +283,6 @@ void exec_pipes(int client_socket)
             exit(1);
         }
     }
-
     // Closing the unused pipe ends
     for (int j = 0; j < totalPipes; j++)
         close(pipes[j]);
@@ -341,9 +341,7 @@ int main(int argc, char *argv[])
             perror("accept failed");
             exit(EXIT_FAILURE);
         }
-        dup2( client_socket, STDOUT_FILENO ); 
         main_loop(client_socket);
-        close(client_socket);
     }
 
     else if (p > 0)
