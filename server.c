@@ -17,7 +17,6 @@
 #define BACKLOG 3
 #define SIZE_OF_COMMAND_LINE 100
 #define SIZE_OF_CWD 1024
-#define MAXLINE 1024
 
 /* Initializing commands of the shell */
 void cmd_help(int);
