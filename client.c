@@ -1,5 +1,9 @@
+/*  ----- Remote CLI Shell Server -----  */
 
-/* CLient side */
+//      Walid Chebaro
+//      Joseph Zakher
+//      Christophe Jabbour
+
 #include <unistd.h>
 #include <string.h>
 #include <sys/wait.h>
@@ -7,6 +11,7 @@
 #include <stdio.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <pthread.h>
 
 #define SIZE_OF_LINE 1024
 #define SERV_PORT 8080
@@ -15,7 +20,7 @@
 int main(int argc, char *argv[])
 {
 
-    int client_socket = 0; // client socket used to communicate with a server
+    int client_socket; // client socket used to communicate with a server
     struct sockaddr_in servaddr;
     /* Create a socket with the specified domain and protocol */
     if ((client_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
@@ -42,60 +47,41 @@ int main(int argc, char *argv[])
     while (1)
     {
         char line[SIZE_OF_LINE];
-        char output[SIZE_OF_LINE];
-        char cmd[SIZE_OF_COMMAND_LINE];
         int stop = 0;
-        int no_output = 2;
-        read(client_socket, line, SIZE_OF_LINE);
-        while (no_output == 2)
+
+        if (read(client_socket, line, sizeof(line)) >= 0)
         {
             printf("WJC_SHELL%s: ", line);
-
-            fgets(cmd, sizeof(cmd), stdin); //read from stdinof user the command
-            if (cmd[0] == '\n')
-            {
-                no_output = 2;
-            }
-            else if (cmd[0] == 'c' && cmd[1] == 'd')
-            {
-                no_output = 1;
-            } //if command is cd
-            else if (cmd[0] == '.' && cmd[1] == '/')
-            {
-                no_output = 1;
-            } //if command starts with ./
-            else if (cmd[0] == 'r' && cmd[1] == 'm')
-            {
-                no_output = 1;
-            } //if command is rm
-            else if (cmd[0] == 'm' && cmd[1] == 'k' && cmd[2] == 'd' && cmd[3] == 'i' && cmd[4] == 'r')
-            {
-                no_output = 1;
-            } //if command is mkdir
-            else if (cmd[0] == 's' && cmd[1] == 't' && cmd[2] == 'o' && cmd[3] == 'p')
-            {
-                no_output = 1;
-            }//if command is stop
-            else
-            {
-                no_output = 0;
-            }
         }
 
-        memset(line, 0, sizeof(line));
-        send(client_socket, cmd, sizeof(cmd), 0);
-        if (no_output == 0)
+        memset(line, 0, SIZE_OF_LINE);
+
+        fgets(line, sizeof(line), stdin); //read from stdinof user the command
+
+        if (line[0] == 'e' && line[1] == 'x' && line[2] == 'i' && line[3] == 't')
         {
-            read(client_socket, output, sizeof(output));
-            printf("%s", output);
+            exit(1);
+        } //if command is stop
+        if (line[0] == 's' && line[1] == 't' && line[2] == 'o' && line[3] == 'p')
+        {
+            stop = 1;
+        } //if command is stop
+
+        send(client_socket, line, sizeof(line), 0);
+
+        memset(line, 0, SIZE_OF_LINE);
+
+        if (read(client_socket, line, sizeof(line)) >= 0)
+        {
+            printf("%s", line);
         }
-        memset(output, 0, sizeof(output));
-        memset(cmd, 0, sizeof(cmd));
-        if (stop = 1)
+
+        if (stop == 1)
         {
             exit(1);
         }
     }
+    close(client_socket);
 
     return 0;
 }
