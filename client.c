@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
         {
             printf("%s", line);
         }
-
+        
         if (stop == 1)
         {
             exit(1);
